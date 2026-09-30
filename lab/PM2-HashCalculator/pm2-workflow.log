@@ -1,0 +1,29 @@
+# PM2 - Hash Calculator / Password Cracker workflow (local replica of the
+# networkwalks.com tools - identical client-side algorithms)
+# run: 2026-09-30 13:50 UTC
+
+$ python3 tools/pdfhash.py extract PM1-JTR/locked.pdf > hash.txt
+$pdf$4*4*128*-1028*1*16*60c232d469ee146335f6eeb92c2c075a*32*63e6f7c26d86221168a499355944fa9d0021446990b9e4114071a4d9104984c1*32*05c7bc16211fcc9d7fbb3669dc06b2ef528475193001dcf1b70456c595c9d433
+
+=== ATTEMPT 1: built-in wordlist (100 common passwords) ===
+$ python3 tools/pdfhash.py crack hash.txt --wordlist builtin-wordlist-100.txt
+[*] PDF hash   : $pdf$4*4*128*-1028*1*16*60c232d469ee146335f6eeb92c2c075a*32*63e6f7c26d86...
+[*] Cipher     : V=4 R=4 128-bit (PDF standard security handler)
+[*] Wordlist   : builtin-wordlist-100.txt (100 words)
+[*] Dictionary attack started ...
+[-] FAILED: password not in this wordlist (100 words tried in 0.01s)
+exit code: 1 (password not in list)
+
+=== ATTEMPT 2: updated wordlist (10,000 common passwords) ===
+$ python3 tools/pdfhash.py crack hash.txt --wordlist updated-wordlist-10k.txt
+[*] PDF hash   : $pdf$4*4*128*-1028*1*16*60c232d469ee146335f6eeb92c2c075a*32*63e6f7c26d86...
+[*] Cipher     : V=4 R=4 128-bit (PDF standard security handler)
+[*] Wordlist   : updated-wordlist-10k.txt (10001 words)
+[*] Dictionary attack started ...
+[+] CRACKED after 9802/10001 words in 1.13s (8,702 pw/s)
+[+] Password   : monday1
+exit code: 0 (password recovered)
+
+=== VERIFY: recovered password opens the PDF ===
+$ python3 tools/pdfhash.py verify PM1-JTR/locked.pdf monday1
+[+] 'monday1' opens ../PM1-JTR/locked.pdf (1 page(s)) - password confirmed

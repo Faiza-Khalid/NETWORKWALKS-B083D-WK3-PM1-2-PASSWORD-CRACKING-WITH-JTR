@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hash Calculator &amp; Password Cracker — Week 3 Lab</title>
+<style>
+  :root{
+    --blue:#0f4c81; --blue2:#1565a8; --bg:#f4f7fb; --card:#ffffff;
+    --ink:#16222f; --mut:#5c6b7c; --line:#dde5ef; --ok:#0a7d3f;
+    --bad:#b3261e; --code:#0d1b2a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 16px 60px}
+  header.site{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-radius:14px;padding:26px 28px;margin-bottom:22px}
+  header.site h1{font-size:1.55rem;font-weight:700;letter-spacing:.2px}
+  header.site p{opacity:.92;margin-top:6px;font-size:.95rem}
+  .badge{display:inline-block;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:2px 12px;font-size:.78rem;margin-top:10px;margin-right:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:22px;box-shadow:0 1px 3px rgba(16,34,55,.05)}
+  .card h2{font-size:1.2rem;color:var(--blue);margin-bottom:4px}
+  .card .sub{color:var(--mut);font-size:.9rem;margin-bottom:14px}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 18px;font-size:.9rem;cursor:pointer;color:var(--mut)}
+  .tab.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+  .drop{border:2px dashed #b9c8dc;border-radius:12px;padding:30px 16px;text-align:center;color:var(--mut);cursor:pointer;transition:.15s}
+  .drop.drag,.drop:hover{border-color:var(--blue);background:#eef4fb;color:var(--blue)}
+  .drop .big{font-size:1.6rem}
+  input[type=text],textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.95rem;font-family:inherit}
+  textarea{font-family:ui-monospace,Consolas,monospace;font-size:.82rem;min-height:84px;word-break:break-all}
+  label{font-size:.85rem;font-weight:600;color:var(--mut);display:block;margin:12px 0 6px}
+  .hashrow{display:flex;gap:10px;align-items:flex-start;margin:8px 0}
+  .hashrow b{flex:0 0 92px;font-size:.8rem;color:var(--mut);padding-top:8px}
+  .hashrow code{flex:1;background:var(--code);color:#9fe8c1;border-radius:8px;padding:8px 10px;font-size:.8rem;word-break:break-all}
+  button.primary{background:var(--blue);color:#fff;border:0;border-radius:10px;padding:12px 26px;font-size:1rem;font-weight:700;cursor:pointer}
+  button.primary:disabled{background:#9db3c8;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--blue);border:1px solid var(--blue);border-radius:8px;padding:6px 14px;font-size:.82rem;cursor:pointer;margin-top:8px}
+  .meter{height:16px;background:#e6edf6;border-radius:999px;overflow:hidden;margin:12px 0 6px}
+  .meter>div{height:100%;width:0;background:linear-gradient(90deg,var(--blue),#3f9f6f);transition:width .12s linear}
+  .stats{display:flex;gap:18px;color:var(--mut);font-size:.86rem;flex-wrap:wrap}
+  .stats b{color:var(--ink)}
+  .result{display:none;margin-top:14px;border-radius:12px;padding:16px;border:1px solid}
+  .result.ok{display:block;border-color:#9fd8b6;background:#edf9f2}
+  .result.bad{display:block;border-color:#eeb4b0;background:#fcf0ef}
+  .result .pw{font-size:1.35rem;font-weight:800;color:var(--ok);font-family:ui-monospace,Consolas,monospace;margin:6px 0}
+  .result.bad .pw{color:var(--bad);font-size:1rem}
+  .steps{counter-reset:s}
+  .step{position:relative;padding-left:44px;margin:14px 0}
+  .step:before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .radio{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}
+  .radio label{display:flex;align-items:center;gap:6px;font-weight:500;color:var(--ink);margin:0;cursor:pointer}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{background:#eef4fb;border:1px solid var(--line);color:var(--blue);border-radius:8px;padding:3px 10px;font-size:.78rem;font-family:ui-monospace,Consolas,monospace}
+  .note{font-size:.78rem;color:var(--mut);margin-top:12px}
+  footer{color:var(--mut);font-size:.8rem;text-align:center;margin-top:8px}
+  .warn{background:#fff7e6;border:1px solid #f0d9a6;color:#7a5b12;border-radius:10px;padding:10px 14px;font-size:.85rem;margin-bottom:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site">
+    <h1>Hash Calculator &amp; Password Cracker</h1>
+    <p>Duplicate of the Networkwalks Academy Week&nbsp;3 lab workflow — generate MD5/SHA hashes,
+       extract a crackable <code>$pdf$</code> hash from a password-protected PDF, then run a
+       dictionary attack against it, the same idea John the Ripper uses.</p>
+    <span class="badge">B083D · Week 3 · PM2</span>
+    <span class="badge">100% client-side — nothing is uploaded</span>
+    <span class="badge">Educational replica — authorized testing only</span>
+  </header>
+
+  <div class="warn"><b>Lab use only.</b> Use this exclusively on files you own or are authorised to
+  test. All parsing, hashing and cracking happens locally in your browser.</div>
+
+  <!-- ===================== HASH CALCULATOR ===================== -->
+  <div class="card">
+    <h2>Hash Calculator</h2>
+    <p class="sub">Generate MD5, SHA-1, SHA-256, SHA-384, SHA-512, or extract a crackable hash
+       from a password-protected PDF.</p>
+
+    <div class="tabs">
+      <div class="tab active" data-t="text">Text</div>
+      <div class="tab" data-t="file">File</div>
+      <div class="tab" data-t="pdf">PDF</div>
+    </div>
+
+    <!-- TEXT -->
+    <div id="pane-text">
+      <label>Text to hash</label>
+      <input type="text" id="txtin" placeholder="Type or paste text. Hashes update as you type." autocomplete="off">
+      <label><input type="checkbox" id="upper" style="margin-right:6px"> Uppercase output</label>
+      <div id="texthashes"></div>
+    </div>
+
+    <!-- FILE -->
+    <div id="pane-file" style="display:none">
+      <div class="drop" id="dropfile"><span class="big">📁</span><br>
+        Click to choose a file, or drop one here<br>
+        <small>Hashing happens entirely in your browser</small></div>
+      <input type="file" id="filein" hidden>
+      <div id="filehashes"></div>
+    </div>
+
+    <!-- PDF -->
+    <div id="pane-pdf" style="display:none">
+      <div class="drop" id="droppdf"><span class="big">🔒</span><br>
+        Click to choose a PDF, or drop one here<br>
+        <small>Nothing is uploaded, the PDF is parsed locally</small></div>
+      <input type="file" id="pdfin" accept="application/pdf" hidden>
+      <div id="pdfout" style="display:none">
+        <label>PDF encryption parameters</label>
+        <div class="meta" id="pdfmeta"></div>
+        <label>Crackable hash (John the Ripper <code>$pdf$</code> format)</label>
+        <textarea id="pdfhash" readonly rows="3"></textarea>
+        <button class="ghost" id="copyhash">Copy hash</button>
+        <button class="ghost" id="sendhash">Send to Password Cracker ↓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PASSWORD CRACKER ===================== -->
+  <div class="card">
+    <h2>Password Cracker — Dictionary Attack Lab</h2>
+    <p class="sub">Hash every word in a wordlist and match it against a PDF password hash,
+       the same idea John the Ripper uses.</p>
+
+    <div class="steps">
+      <div class="step"><b>Extract the <code>$pdf$</code> hash</b> in the Hash Calculator above
+        (PDF tab) and send it down, or paste it below.</div>
+      <div class="step">
+        <b>Paste the PDF hash</b>
+        <label>PDF hash (<code>$pdf$…</code>)</label>
+        <textarea id="crackhash" placeholder="$pdf$1*2*40*-4*1*…" rows="3"></textarea>
+      </div>
+      <div class="step">
+        <b>Choose a wordlist</b>
+        <div class="radio">
+          <label><input type="radio" name="wl" value="builtin" checked> Built-in list (100 passwords)</label>
+          <label><input type="radio" name="wl" value="upload"> Upload wordlist (.txt)</label>
+        </div>
+        <input type="file" id="wlin" accept=".txt" hidden>
+        <div class="meta"><span class="chip" id="wlinfo">Active: built-in list · 100 words</span></div>
+      </div>
+      <div class="step"><b>Run the attack</b>, then open your PDF with the password.
+        <div style="margin-top:12px">
+          <button class="primary" id="start">START CRACKING</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="meter"><div id="bar"></div></div>
+    <div class="stats">
+      <span>Tried: <b id="tried">0</b> / <b id="total">0</b></span>
+      <span><b id="rate">0</b> pw/s</span>
+      <span><b id="pct">0</b>%</span>
+    </div>
+
+    <div class="result" id="resok">
+      ✅ <b>Password found!</b> This is the PDF password. Open your PDF and enter it to unlock the file.
+      <div class="pw" id="foundpw"></div>
+      <button class="ghost" id="copypw">Copy password</button>
+    </div>
+    <div class="result" id="resbad">
+      ❌ <b>Password not found.</b> The password is not in this wordlist — a dictionary attack
+      can only recover passwords that exist in its candidate list.
+      <div class="pw">Improve your wordlist (more / better candidates) and try again.</div>
+    </div>
+  </div>
+
+  <footer>Free lab replica of the Networkwalks Academy Week 3 exercise · Cybersecurity &amp;
+  Ethical Hacking · B083D</footer>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+ *  MD5 (compact, operates on Uint8Array) — needed because Web Crypto
+ *  does not provide MD5.
+ * ===================================================================== */
+function md5(bytes){
+  function rl(x,c){return (x<<c)|(x>>>(32-c));}
+  const S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+           5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+           4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+           6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+  const K=new Uint32Array(64);
+  for(let i=0;i<64;i++)K[i]=(Math.floor(Math.abs(Math.sin(i+1))*4294967296))>>>0;
+  const len=bytes.length, withPad=new Uint8Array((((len+8)>>6)+1)*64);
+  withPad.set(bytes); withPad[len]=0x80;
+  const bitLen=len*8;
+  const dv=new DataView(withPad.buffer);
+  dv.setUint32(withPad.length-8,bitLen>>>0,true);
+  dv.setUint32(withPad.length-4,Math.floor(bitLen/4294967296),true);
+  let a0=0x67452301,b0=0xefcdab89,c0=0x98badcfe,d0=0x10325476;
+  for(let off=0;off<withPad.length;off+=64){
+    const M=new Uint32Array(16);
+    for(let i=0;i<16;i++)M[i]=dv.getUint32(off+i*4,true);
+    let A=a0,B=b0,C=c0,D=d0;
+    for(let i=0;i<64;i++){
+      let F,g;
+      if(i<16){F=(B&C)|(~B&D);g=i;}
+      else if(i<32){F=(D&B)|(~D&C);g=(5*i+1)&15;}
+      else if(i<48){F=B^C^D;g=(3*i+5)&15;}
+      else{F=C^(B|~D);g=(7*i)&15;}
+      F=(F+A+K[i]+M[g])|0;
+      A=D;D=C;C=B;
+      B=(B+rl(F,S[i]))|0;
+    }
+    a0=(a0+A)|0;b0=(b0+B)|0;c0=(c0+C)|0;d0=(d0+D)|0;
+  }
+  const out=new Uint8Array(16), odv=new DataView(out.buffer);
+  [a0,b0,c0,d0].forEach((v,i)=>odv.setUint32(i*4,v>>>0,true));
+  return out;
+}
+const hex=u8=>[...u8].map(b=>b.toString(16).padStart(2,"0")).join("");
+const sha=crypto.subtle;
+
+/* =====================================================================
+ *  RC4 + AES helpers for the PDF standard security handler
+ * ===================================================================== */
+function rc4(key,data){
+  const S=new Uint8Array(256);
+  for(let i=0;i<256;i++)S[i]=i;
+  let j=0;
+  for(let i=0;i<256;i++){j=(j+S[i]+key[i%key.length])&255;[S[i],S[j]]=[S[j],S[i]];}
+  const out=new Uint8Array(data.length);
+  let i=0;j=0;
+  for(let n=0;n<data.length;n++){
+    i=(i+1)&255;j=(j+S[i])&255;[S[i],S[j]]=[S[j],S[i]];
+    out[n]=data[n]^S[(S[i]+S[j])&255];
+  }
+  return out;
+}
+async function aesCbcEnc(keyBytes,ivBytes,data){
+  const k=await sha.importKey("raw",keyBytes,{name:"AES-CBC"},false,["encrypt"]);
+  const buf=await sha.encrypt({name:"AES-CBC",iv:ivBytes},k,data);
+  return new Uint8Array(buf);
+}
+const sha256=async b=>new Uint8Array(await sha.digest("SHA-256",b));
+const sha384=async b=>new Uint8Array(await sha.digest("SHA-384",b));
+const sha512=async b=>new Uint8Array(await sha.digest("SHA-512",b));
+
+/* =====================================================================
+ *  PDF padding string (PDF 1.7 spec)
+ * ===================================================================== */
+const PAD=new Uint8Array([0x28,0xBF,0x4E,0x5E,0x4E,0x75,0x8A,0x41,0x64,0x00,0x4E,0x56,
+  0xFF,0xFA,0x01,0x08,0x2E,0x2E,0x00,0xB6,0xD0,0x68,0x3E,0x80,0x2F,0x0C,0xA9,0xFE,
+  0x64,0x53,0x69,0x7A]);
+
+/* =====================================================================
+ *  Raw PDF parsing — pull /Encrypt + /ID out of a locked PDF without
+ *  knowing the password (the Encrypt dictionary is stored in plain text)
+ * ===================================================================== */
+function findString(data,key){
+  const re=new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s*(<([0-9A-Fa-f\\s]*)>|\\()");
+  const m=re.exec(data);
+  if(!m)return null;
+  if(m[2]!==undefined)return new Uint8Array(m[2].replace(/\s/g,"").match(/../g).map(h=>parseInt(h,16)));
+  const start=m.index+m[0].length;
+  let depth=1,out=[],i=start;
+  while(i<data.length&&depth){
+    const c=data[i];
+    if(c===92){ // backslash
+      const n=data[i+1];
+      if(n>=48&&n<=55){out.push(parseInt(data.substr(i+1,3),8)&255);i+=4;continue;}
+      const map={110:10,114:13,116:9,98:8,102:12};
+      out.push(map[n]!==undefined?map[n]:n);i+=2;continue;
+    }
+    if(c===40)depth++;
+    else if(c===41){depth--;if(!depth)return new Uint8Array(out);}
+    out.push(c);i++;
+  }
+  return null;
+}
+function findInt(data,key,dflt){
+  const m=new RegExp(key+"\\s+(-?\\d+)").exec(data);
+  return m?parseInt(m[1],10):dflt;
+}
+function parseEncryptedPdf(bytes){
+  const data=new TextDecoder("latin1").decode(bytes);
+  let enc=data;
+  const ref=/\/Encrypt\s+(\d+)\s+\d+\s+R/.exec(data);
+  if(ref){
+    const m=new RegExp(ref[1]+"\\s+\\d+\\s+obj([\\s\\S]{0,4000}?)endobj").exec(data);
+    if(m)enc=m[1];
+  }else{
+    const off=data.indexOf("/Encrypt <<");
+    if(off>=0)enc=data.substr(off+8);
+  }
+  const V=findInt(enc,"/V",1), R=findInt(enc,"/R",2);
+  const outer=enc.replace(/\/CF\s*<<[\s\S]*?>>/g,"");
+  let bits=findInt(outer,"/Length");
+  if(bits===null||bits===undefined){
+    const cf=/\/StdCF\s*<<([\s\S]*?)>>/.exec(enc);
+    bits=(cf?findInt(cf[1],"/Length",5):5)*8;
+  }
+  const P=findInt(enc,"/P",-4);
+  const encMeta=!/\/EncryptMetadata\s+false/i.test(enc);
+  const U=findString(enc,"/U"),O=findString(enc,"/O");
+  const idm=/\/ID\s*\[?\s*<([0-9A-Fa-f\s]*)>/.exec(data);
+  const id=idm?new Uint8Array(idm[1].replace(/\s/g,"").match(/../g).map(h=>parseInt(h,16))):new Uint8Array();
+  if(!U||!O)throw new Error("No /U and /O found — is this a password-protected PDF?");
+  return {V,R,bits,P,encMeta,id,U,O};
+}
+function toPdfHashLine(i){
+  const f=[i.V,i.R,i.bits,i.P,i.encMeta?1:0,i.id.length,hex(i.id),i.U.length,hex(i.U),i.O.length,hex(i.O)];
+  return "$pdf$"+f.join("*");
+}
+function fromPdfHashLine(h){
+  h=h.trim();
+  if(h.includes(":")&&h.split(":").length&&h.indexOf("$pdf$")>0)h=h.slice(h.indexOf("$pdf$"));
+  if(!h.startsWith("$pdf$"))throw new Error("Not a $pdf$ hash");
+  const f=h.slice(5).split("*");
+  return {V:+f[0],R:+f[1],bits:+f[2],P:+f[3],encMeta:f[4]==="1",
+          id:hexToBytes(f[6]),U:hexToBytes(f[8]),O:hexToBytes(f[10])};
+}
+function hexToBytes(h){return new Uint8Array(h.match(/../g).map(x=>parseInt(x,16)));}
+
+/* =====================================================================
+ *  Key derivation + validation (PDF 1.7 algorithms 3.2, 3.4, 3.5, 3.2b)
+ *  — the same code paths John the Ripper's "pdf" format implements
+ * ===================================================================== */
+function padPassword(pw){
+  pw=pw.length>32?pw.slice(0,32):pw;
+  const out=new Uint8Array(32);
+  out.set(pw);
+  out.set(PAD.subarray(0,32-pw.length),pw.length);   // first (32-N) bytes of PAD
+  return out;
+}
+function concatU8(arrs){
+  let n=0;arrs.forEach(a=>n+=a.length);
+  const out=new Uint8Array(n);let o=0;
+  arrs.forEach(a=>{out.set(a,o);o+=a.length;});
+  return out;
+}
+async function computeKey(info,pw){
+  const n=info.bits/8;
+  const p4=new Uint8Array([(info.P&255),((info.P>>8)&255),((info.P>>16)&255),((info.P>>24)&255)]);
+  const input=[padPassword(pw),info.O,p4,info.id];
+  if(info.R>=4&&!info.encMeta)input.push(new Uint8Array([255,255,255,255]));
+  let d=md5(concatU8(input));
+  if(info.R>=3){for(let i=0;i<50;i++)d=md5(d.subarray(0,n));}
+  return d.slice(0,n);
+}
+async function computeU(info,key){
+  if(info.R===2)return rc4(key,PAD);
+  const digest=md5(concatU8([PAD,info.id]));
+  let x=rc4(key,digest);
+  for(let i=1;i<=19;i++){
+    const k=new Uint8Array(key.length);
+    for(let j=0;j<key.length;j++)k[j]=key[j]^i;
+    x=rc4(k,x);
+  }
+  return x.slice(0,16);
+}
+async function hashR6(pw,salt){
+  let block=await sha256(concatU8([pw,salt]));
+  let data=new Uint8Array(0);
+  let i=0;
+  while(i<64||i<data[data.length-1]+32){
+    const unit=concatU8([pw,block]);
+    let big=new Uint8Array(unit.length*64);
+    for(let j=0;j<64;j++)big.set(unit,j*unit.length);
+    data=await aesCbcEnc(block.slice(0,16),block.slice(16,32),big);
+    const sum=data.slice(0,16).reduce((a,b)=>a+b,0);
+    const size=32+(sum%3)*16;
+    block=size===32?await sha256(data):size===48?await sha384(data):await sha512(data);
+    i++;
+  }
+  return block.slice(0,32);
+}
+async function checkPassword(info,pw){
+  if(info.R<=4){
+    const key=await computeKey(info,pw);
+    const U=await computeU(info,key);
+    return info.R===2?U.every((b,i)=>b===info.U[i]):U.every((b,i)=>b===info.U[i]);
+  }
+  if(info.R===5)return (await sha256(concatU8([pw.slice(0,127),info.U.slice(32,40)]))).every((b,i)=>b===info.U[i]);
+  return (await hashR6(pw.slice(0,127),info.U.slice(32,40))).every((b,i)=>b===info.U[i]);
+}
+
+/* =====================================================================
+ *  Built-in wordlist — 100 common passwords (same spirit as the site's
+ *  built-in list; taken from SecLists 500-worst-passwords)
+ * ===================================================================== */
+const BUILTIN=`123456
+password
+12345678
+1234
+pussy
+12345
+dragon
+qwerty
+696969
+mustang
+letmein
+baseball
+master
+michael
+football
+shadow
+monkey
+abc123
+pass
+fuckme
+6969
+jordan
+harley
+ranger
+iwantu
+jennifer
+hunter
+fuck
+2000
+test
+batman
+trustno1
+thomas
+tigger
+robert
+access
+love
+buster
+1234567
+soccer
+hockey
+killer
+george
+sexy
+andrew
+charlie
+superman
+asshole
+fuckyou
+dallas
+jessica
+panties
+pepper
+1111
+austin
+william
+daniel
+golfer
+summer
+heather
+hammer
+yankees
+joshua
+maggie
+biteme
+enter
+ashley
+thunder
+cowboy
+silver
+richard
+fucker
+orange
+merlin
+michelle
+corvette
+bigdog
+cheese
+matthew
+121212
+patrick
+martin
+freedom
+ginger
+blowjob
+nicole
+sparky
+yellow
+camaro
+secret
+dick
+falcon
+taylor
+111111
+131313
+123123
+bitch
+hello
+scooter
+please`.split("\n").map(s=>s.trim()).filter(Boolean);
+
+/* =====================================================================
+ *  UI wiring
+ * ===================================================================== */
+const $=id=>document.getElementById(id);
+
+/* tabs */
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  ["text","file","pdf"].forEach(p=>$("pane-"+p).style.display=p===t.dataset.t?"":"none");
+}));
+
+/* text hashing */
+async function hashText(){
+  const v=$("txtin").value;
+  const enc=new TextEncoder().encode(v);
+  const rows=[];
+  rows.push(["MD5",hex(md5(enc))]);
+  for(const alg of ["SHA-1","SHA-256","SHA-384","SHA-512"]){
+    rows.push([alg,hex(new Uint8Array(await sha.digest(alg,enc)))]);
+  }
+  const up=$("upper").checked;
+  $("texthashes").innerHTML=rows.map(([a,h])=>
+    `<div class="hashrow"><b>${a}</b><code>${up?h.toUpperCase():h}</code></div>`).join("");
+}
+$("txtin").addEventListener("input",hashText);
+$("upper").addEventListener("change",hashText);
+hashText();
+
+/* file hashing */
+$("dropfile").addEventListener("click",()=>$("filein").click());
+$("filein").addEventListener("change",e=>fileHash(e.target.files[0]));
+$("dropfile").addEventListener("dragover",e=>{e.preventDefault();$("dropfile").classList.add("drag");});
+$("dropfile").addEventListener("dragleave",()=>$("dropfile").classList.remove("drag"));
+$("dropfile").addEventListener("drop",e=>{e.preventDefault();$("dropfile").classList.remove("drag");fileHash(e.dataTransfer.files[0]);});
+async function fileHash(f){
+  if(!f)return;
+  const buf=new Uint8Array(await f.arrayBuffer());
+  $("filehashes").innerHTML=`<label>${f.name} (${f.size.toLocaleString()} bytes)</label>`+
+    `<div class="hashrow"><b>MD5</b><code>${hex(md5(buf))}</code></div>`;
+  for(const alg of ["SHA-1","SHA-256","SHA-384","SHA-512"]){
+    $("filehashes").innerHTML+=`<div class="hashrow"><b>${alg}</b><code>${hex(new Uint8Array(await sha.digest(alg,buf)))}</code></div>`;
+  }
+}
+
+/* PDF hash extraction */
+$("droppdf").addEventListener("click",()=>$("pdfin").click());
+$("pdfin").addEventListener("change",e=>pdfHash(e.target.files[0]));
+$("droppdf").addEventListener("dragover",e=>{e.preventDefault();$("droppdf").classList.add("drag");});
+$("droppdf").addEventListener("dragleave",()=>$("droppdf").classList.remove("drag"));
+$("droppdf").addEventListener("drop",e=>{e.preventDefault();$("droppdf").classList.remove("drag");pdfHash(e.dataTransfer.files[0]);});
+async function pdfHash(f){
+  if(!f)return;
+  try{
+    const bytes=new Uint8Array(await f.arrayBuffer());
+    const info=parseEncryptedPdf(bytes);
+    $("pdfout").style.display="";
+    $("pdfmeta").innerHTML=
+      `<span class="chip">V=${info.V}</span><span class="chip">R=${info.R}</span>`+
+      `<span class="chip">${info.bits}-bit key</span><span class="chip">P=${info.P}</span>`+
+      `<span class="chip">/ID ${hex(info.id).slice(0,16)}…</span>`;
+    $("pdfhash").value=toPdfHashLine(info);
+  }catch(err){
+    $("pdfout").style.display="";
+    $("pdfmeta").innerHTML="";
+    $("pdfhash").value="ERROR: "+err.message;
+  }
+}
+$("copyhash").addEventListener("click",()=>navigator.clipboard.writeText($("pdfhash").value));
+$("sendhash").addEventListener("click",()=>{
+  $("crackhash").value=$("pdfhash").value;
+  document.querySelector("#crackhash").scrollIntoView({behavior:"smooth",block:"center"});
+});
+
+/* wordlist choice */
+let customList=null;
+document.querySelectorAll("input[name=wl]").forEach(r=>r.addEventListener("change",()=>{
+  if(r.value==="upload"&&r.checked){$("wlin").click();}
+  updateWlInfo();
+}));
+$("wlin").addEventListener("change",async e=>{
+  const f=e.target.files[0];
+  if(!f){document.querySelector('input[name=wl][value=builtin]').checked=true;}
+  else customList=(await f.text()).split(/\r?\n/).filter(Boolean);
+  updateWlInfo();
+});
+function updateWlInfo(){
+  const mode=document.querySelector("input[name=wl]:checked").value;
+  const n=mode==="builtin"?BUILTIN.length:(customList?customList.length:0);
+  $("wlinfo").textContent=`Active: ${mode==="builtin"?"built-in list":"uploaded wordlist"} · ${n} words`;
+}
+
+/* the attack */
+$("start").addEventListener("click",async ()=>{
+  $("resok").className="result";$("resbad").className="result";
+  const btn=$("start");btn.disabled=true;btn.textContent="CRACKING…";
+  let info;
+  try{info=fromPdfHashLine($("crackhash").value);}
+  catch(err){
+    $("resbad").className="result bad";
+    document.querySelector("#resbad .pw").textContent="Invalid input: "+err.message;
+    btn.disabled=false;btn.textContent="START CRACKING";return;
+  }
+  const mode=document.querySelector("input[name=wl]:checked").value;
+  const words=mode==="builtin"?BUILTIN:customList||[];
+  $("total").textContent=words.length;
+  const t0=performance.now();
+  let found=null,n=0;
+  for(const w of words){
+    n++;
+    if(n%25===0||n===words.length){
+      const el=(performance.now()-t0)/1000;
+      $("tried").textContent=n;
+      $("rate").textContent=el>0?Math.round(n/el).toLocaleString():0;
+      const pct=Math.round(100*n/words.length);
+      $("pct").textContent=pct;$("bar").style.width=pct+"%";
+      await new Promise(r=>setTimeout(r));
+    }
+    if(await checkPassword(info,new TextEncoder().encode(w))){found=w;break;}
+  }
+  $("tried").textContent=n;
+  const el=(performance.now()-t0)/1000;
+  $("rate").textContent=el>0?Math.round(n/el).toLocaleString():0;
+  const pct=Math.round(100*n/words.length);
+  $("pct").textContent=pct;$("bar").style.width=pct+"%";
+  if(found!==null){
+    $("foundpw").textContent=found;
+    $("resok").className="result ok";
+  }else{
+    $("resbad").className="result bad";
+    document.querySelector("#resbad .pw").textContent=
+      `Exhausted ${words.length} candidates in ${el.toFixed(1)}s without a match.`;
+  }
+  btn.disabled=false;btn.textContent="START CRACKING";
+});
+$("copypw").addEventListener("click",()=>navigator.clipboard.writeText($("foundpw").textContent));
+</script>
+</body>
+</html>

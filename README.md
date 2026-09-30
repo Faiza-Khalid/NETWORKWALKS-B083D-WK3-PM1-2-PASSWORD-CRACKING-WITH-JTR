@@ -16,6 +16,11 @@ A visual, educational walkthrough of password-recovery testing against password-
 
 This is a **screenshot-based lab record**; it does not contain an application or executable source code.
 
+> **Fresh automated run (30 Sep 2026):** the complete lab was re-executed end-to-end on Linux —
+> John the Ripper Jumbo **compiled from source** and run against a freshly created locked PDF,
+> plus a working local replica of the Hash Calculator / Password Cracker web workflow.
+> Full write-up, artefacts and evidence: **[`lab/LAB-REPORT.md`](lab/LAB-REPORT.md)**.
+
 ## Tools and resources
 
 - [John the Ripper](https://www.openwall.com/john/) — password-auditing and recovery tool. Download the current release appropriate for your operating system from the official Openwall website.
@@ -94,6 +99,7 @@ Screenshots: [19](19-Failure-Due-To-LimitedWordlist.png), [20](20-Update-Wordlis
 | `19`–`26` | Wordlist limitation, update, retry, and recovery results |
 | `README.md` | Lab overview and safe-use documentation |
 | `LINKEDIN_POST.md` | Ready-to-publish project summary |
+| `lab/` | Fresh automated end-to-end run (30 Sep 2026): report, locked sample PDF, hashes, wordlists, terminal logs, tool code and evidence screenshots — see [`lab/LAB-REPORT.md`](lab/LAB-REPORT.md) |
 
 ## Learning outcomes
 
